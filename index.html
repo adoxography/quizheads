@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
+
+    <style>
+      #timers {
+        display: flex;
+        gap: 2em;
+      }
+
+      .player {
+        background-color: #eef;
+        padding: 1em;
+        border-radius: 1rem;
+      }
+
+      ul {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="timers">
+      <div class="player">
+        <time></time>
+      </div>
+      
+      <div class="player">
+        <time></time>
+      </div>
+    </div>
+
+    <p id="question"></p>
+
+    <ul id="options">
+      <li>
+        <button></button>
+      </li>
+      <li>
+        <button></button>
+      </li>
+      <li>
+        <button></button>
+      </li>
+      <li>
+        <button></button>
+      </li>
+    </ul>
+
+    <button id="start">
+      Start
+    </button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+
+      const question = document.querySelector('#question');
+      const options = document.querySelectorAll('#options button');
+      const timers = document.querySelectorAll('#timers time');
+      const startEl = document.querySelector('#start');
+
+      for (let i = 0; i < options.length; i++) {
+        const option = options[i];
+        option.addEventListener('click', e => {
+          e.preventDefault();
+          socket.emit('answer', i);
+        });
+      }
+
+      startEl.addEventListener('click', () => {
+        socket.emit('start');
+      });
+
+      socket.on('update', data => {
+        data.players.forEach((player, i) => {
+          timers[i].textContent = new Date(player.time * 1000).toISOString().substr(14, 5);
+        });
+
+        question.innerHTML = data.question.text;
+        data.question.options.forEach((option, i) => {
+          options[i].innerHTML = option;
+        });
+      });
+    </script>
+  </body>
+</html>
