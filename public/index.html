@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
+
+    <link rel="stylesheet" type="text/css" href="css/style.css" />
+  </head>
+  <body>
+    <div id="timers">
+      <div class="player">
+        <time></time>
+      </div>
+      
+      <div class="player">
+        <time></time>
+      </div>
+    </div>
+
+    <p id="question"></p>
+
+    <ul id="options">
+      <li>
+        <button></button>
+      </li>
+      <li>
+        <button></button>
+      </li>
+      <li>
+        <button></button>
+      </li>
+      <li>
+        <button></button>
+      </li>
+    </ul>
+
+    <button id="start">
+      Start
+    </button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/script.js"></script>
+  </body>
+</html>

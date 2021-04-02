@@ -1,0 +1,16 @@
+#timers {
+  display: flex;
+  gap: 2em;
+}
+
+.player {
+  background-color: #eef;
+  padding: 1em;
+  border-radius: 1rem;
+}
+
+ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
