@@ -1,43 +1,285 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Socket.IO chat</title>
+    <title>Quizheads</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#fdf5ff" />
 
     <link rel="stylesheet" type="text/css" href="css/style.css" />
+    <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js" defer></script>
   </head>
   <body>
-    <div id="timers">
-      <div class="player">
-        <time></time>
-      </div>
-      
-      <div class="player">
-        <time></time>
-      </div>
+    <div
+      x-data="{ socket: io(), state: {}, user: { name: '' } }"
+      x-init="
+        socket.on('update', s => { state = s; });
+        window.location.hash = '';
+
+        window.addEventListener('hashchange', () => {
+          const hash = window.location.hash.replace(/^#/, '');
+
+          if (hash.length > 0) {
+            socket.emit('join', hash);
+          } else {
+            socket.emit('leave');
+          }
+        });
+
+        if (localStorage.getItem('trivia.username')) {
+          user.name = localStorage.getItem('trivia.username');
+          socket.emit('sign in', user.name, data => { user = data; });
+        }
+      "
+    >
+      <template x-if="!state.status">
+        <form
+          class="signup-form"
+          @submit.prevent="
+            localStorage.setItem('trivia.username', user.name);
+            socket.emit('sign in', user.name, data => { user = data; });
+          "
+        >
+          <h2 class="results__title">
+            What's your name?
+          </h2>
+
+          <div class="field">
+              <input autofocus spellcheck="false" aria-label="name" class="input" type="text" x-model="user.name" />
+          </div>
+
+          <div class="button-container">
+              <button type="submit" class="button button--primary">
+                  Start Quizzing!
+              </button>
+          </div>
+        </form>
+      </template>
+
+      <template x-if="state.status">
+        <div>
+          <header class="header">
+            <div class="coins">
+              <img class="coins__image" src="images/dollar.svg" />
+              <span class="coins__value" x-text="user.coins"></span>
+            </div>
+
+            <a class="avatar avatar--me">
+              <img
+                class="avatar__image avatar__image--me"
+                :src="'https://avatars.dicebear.com/api/bottts/' + user.name + '.svg'"
+              />
+            </a>
+          </header>
+
+          <template x-if="state.status === 'lobby'">
+            <section class="lobby">
+              <div class="hero">
+                <img class="hero__splash hero__splash--lobby" src="images/lobby.svg" />
+              </div>
+
+              <p class="lobby__message">
+                Join a room or start your own!
+              </p>
+
+              <div class="room-list-container">
+                <div class="room-list">
+                  <template x-if="state.rooms.length === 0">
+                    <p class="no-rooms">
+                      No rooms are open yet!
+                    </p>
+                  </template>
+
+                  <ul>
+                    <template x-for="room in state.rooms">
+                      <li class="room-list__item">
+                        <a :href="'#' + room.id" class="room-preview">
+                          <img class="room-preview__image" :src="'https://avatars.dicebear.com/api/jdenticon/' + room.id + '.svg'" />
+                          <p class="room-preview__name" x-text="'#' + room.id.substring(0, 8)"></p>
+                          <div class="room-preview__players">
+                            <template x-for="n in room.size">
+                              <div class="avatar">
+                                <img class="avatar__image avatar__image--small" :src="'https://avatars.dicebear.com/api/bottts/' + n + '.svg'" />
+                              </div>
+                            </template>
+                          </div>
+                        </a>
+                      </li>
+                    </template>
+                  </ul>
+                </div>
+              </div>
+
+              <div class="button-container">
+                <button
+                  type="button"
+                  class="button button--primary"
+                  @click="socket.emit('create', res => { window.location.hash = res.id; })"
+                >
+                  Create Room
+                </button>
+              </div>
+            </section>
+          </template>
+
+          <template x-if="state.status === 'wait'">
+            <section class="room-section">
+              <div class="hero">
+                <img class="hero__splash hero__splash--room" :src="'https://avatars.dicebear.com/api/jdenticon/' + state.room.name + 'greengiant.svg'" />
+                <p class="hero__title" x-text="'#' + state.room.name.substring(0, 8)"></p>
+              </div>
+
+              <div class="player-box">
+                <template x-for="n in state.players.length" :key="state.players[n-1].id">
+                  <div class="avatar">
+                    <img class="avatar__image" :src="'https://avatars.dicebear.com/api/bottts/' + state.players[n-1].name + '.svg'" />
+                    <p class="avatar__name" x-text="state.players[n-1].name"></p>
+                  </div>
+                </template>
+
+                <template x-for="n in 4 - state.players.length" :key="n">
+                  <div class="avatar">
+                    <p class="avatar__image avatar__image--empty">?</p>
+                  </div>
+                </template>
+              </div>
+
+              <div class="button-container">
+                <a
+                  class="button button--secondary"
+                  href="#"
+                >
+                  Leave
+                </a>
+                <button
+                  type="button"
+                  class="button button--primary"
+                  @click="socket.emit('start')"
+                >
+                  Start
+                </button>
+              </div>
+            </section>
+          </template>
+
+          <template x-if="state.status === 'play' || state.status === 'review'">
+            <section class="game">
+              <template x-if="state.players.length === 1">
+                <div class="hud-box">
+                  <div class="hud">
+                    <div class="avatar">
+                      <p class="avatar__image--empty" x-text="state.players[0].score"></p>
+                    </div>
+                    <time
+                      class="hud__time hud__time--singleplayer"
+                      :class="{ 'hud__time--danger': state.players[0].time < 10000 }"
+                    >
+                      <span class="digit" x-text="0"></span>
+                      <span class="digit" x-text="Math.floor(state.players[0].time / 60000)"></span>
+                      <span class="digit" x-text="':'"></span>
+                      <span class="digit" x-text="Math.floor(state.players[0].time % 100000 / 10000)"></span>
+                      <span class="digit" x-text="Math.floor(state.players[0].time % 10000 / 1000)"></span>
+                      <span class="digit">.</span>
+                      <span class="digit" x-text="state.players[0].time % 1000 / 100"></span>
+                    </time>
+                  </div>
+                </div>
+              </template>
+
+              <template x-if="state.players.length > 1">
+                <div class="hud-box">
+                  <template x-for="(player, index) in state.players" :key="index">
+                    <div class="hud hud--multiplayer">
+                      <div
+                        class="avatar"
+                        :class="{ 'avatar--active': state.turn === index  }"
+                      >
+                        <img class="avatar__image avatar__image--hud" :src="'https://avatars.dicebear.com/api/bottts/' + player.name + '.svg'" />
+                      </div>
+                      <time
+                        class="hud__time hud__time--multiplayer"
+                        :class="{ 'hud__time--danger': player.time < 10000 }"
+                      >
+                        <span class="digit" x-text="0"></span>
+                        <span class="digit" x-text="Math.floor(player.time / 60000)"></span>
+                        <span class="digit" x-text="':'"></span>
+                        <span class="digit" x-text="Math.floor(player.time % 100000 / 10000)"></span>
+                        <span class="digit" x-text="Math.floor(player.time % 10000 / 1000)"></span>
+                        <span class="digit">.</span>
+                        <span class="digit" x-text="player.time % 1000 / 100"></span>
+                      </time>
+                    </div>
+                  </template>
+                </div>
+              </template>
+
+              <div class="question">
+                <p class="question__text" x-html="state.question.text"></p>
+              </div>
+
+              <div class="options">
+                <template x-for="(option, index) in state.question.options" :key="index">
+                  <button
+                    type="button"
+                    class="option"
+                    :class="{
+                      'option--correct': state.question.answer === option,
+                      'option--incorrect': state.lastGuess === option && state.question.answer !== option
+                    }"
+                    :disabled="state.status !== 'play' || state.turn !== state.players.findIndex(player => player.id === socket.id)"
+                    @click="socket.emit('answer', option)"
+                  >
+                    <p class="option__text" x-html="option"></p>
+                  </button>
+                </template>
+              </div>
+            </section>
+          </template>
+
+          <template x-if="state.status === 'results'">
+            <section class="results">
+              <h2 class="results__title">
+                Game Over!
+              </h2>
+
+              <ul class="result-list">
+                <template x-for="(player, index) in state.players" :key="player.name">
+                  <li
+                    class="result"
+                    :class="{ 'result--me': player.name === user.name }"
+                  >
+                    <div class="avatar">
+                      <img class="avatar__image avatar__image--result" :src="'https://avatars.dicebear.com/api/bottts/' + player.name + '.svg'" />
+                      <img
+                        class="avatar__icon"
+                        :src="[
+                          'images/trophy.svg',
+                          'images/medal-gold.svg',
+                          'images/medal-silver.svg',
+                          'images/medal-bronze.svg'
+                        ][index]"
+                      />
+                    </div>
+
+                    <p class="result__name" x-text="player.name"></p>
+                  </li>
+                </template>
+              </ul>
+
+              <div class="button-container">
+                <a
+                  class="button button--primary"
+                  href="#"
+                >
+                  Back to Lobby
+                </a>
+              </div>
+            </section>
+          </template>
+        </div>
+      </template>
     </div>
 
-    <p id="question"></p>
-
-    <ul id="options">
-      <li>
-        <button></button>
-      </li>
-      <li>
-        <button></button>
-      </li>
-      <li>
-        <button></button>
-      </li>
-      <li>
-        <button></button>
-      </li>
-    </ul>
-
-    <button id="start">
-      Start
-    </button>
-
     <script src="/socket.io/socket.io.js"></script>
-    <script src="js/script.js"></script>
   </body>
 </html>

@@ -4,7 +4,6 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "dev": "nodemon src/main.js",
     "start": "node src/main.js"
   },
   "dependencies": {
@@ -12,8 +11,5 @@
     "lodash": "^4.17.21",
     "node-fetch": "^2.6.1",
     "socket.io": "^4.0.0"
-  },
-  "devDependencies": {
-    "nodemon": "^2.0.7"
   }
 }
